@@ -6,7 +6,7 @@ class AdvancedDrawer extends StatefulWidget {
     Key? key,
     required this.child,
     required this.drawer,
-    this.controller,
+    required this.controller,
     this.backdropColor,
     this.openRatio = 0.75,
     this.openScale = 0.85,
@@ -26,7 +26,7 @@ class AdvancedDrawer extends StatefulWidget {
   final Widget drawer;
 
   /// Controller that controls widget state.
-  final AdvancedDrawerController? controller;
+  final AdvancedDrawerController controller;
 
   /// Backdrop color.
   final Color? backdropColor;
@@ -66,11 +66,11 @@ class AdvancedDrawer extends StatefulWidget {
 class _AdvancedDrawerState extends State<AdvancedDrawer>
     with SingleTickerProviderStateMixin {
   late final AdvancedDrawerController _controller;
-  late final AnimationController _animationController;
-  late final Animation<double> _drawerScaleAnimation;
-  late final Animation<Offset> _childSlideAnimation;
-  late final Animation<double> _childScaleAnimation;
-  late final Animation<Decoration> _childDecorationAnimation;
+  late AnimationController _animationController;
+  late Animation<double> _drawerScaleAnimation;
+  late Animation<Offset> _childSlideAnimation;
+  late Animation<double> _childScaleAnimation;
+  late Animation<Decoration> _childDecorationAnimation;
   late double _offsetValue;
   late Offset _freshPosition;
   bool _captured = false;
@@ -80,7 +80,7 @@ class _AdvancedDrawerState extends State<AdvancedDrawer>
   void initState() {
     super.initState();
 
-    _controller = widget.controller ?? AdvancedDrawerController();
+    _controller = widget.controller;
     _controller.addListener(_handleControllerChanged);
 
     _animationController = widget.animationController ??
@@ -91,6 +91,10 @@ class _AdvancedDrawerState extends State<AdvancedDrawer>
 
     _animationController.duration = widget.animationDuration;
 
+    buildAnimation();
+  }
+
+  void buildAnimation() {
     final parentAnimation = widget.animationCurve == null
         ? _animationController
         : CurvedAnimation(
@@ -99,13 +103,13 @@ class _AdvancedDrawerState extends State<AdvancedDrawer>
           );
 
     _drawerScaleAnimation = Tween<double>(
-      begin: 0.75,
+      begin: widget.openRatio,
       end: 1.0,
     ).animate(parentAnimation);
 
     _childSlideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: Offset(widget.openRatio, 0),
+      begin: Offset(_controller.expanded ? widget.openRatio : 0, 0),
+      end: Offset(_controller.expanded ? 1 : widget.openRatio, 0),
     ).animate(parentAnimation);
 
     _childScaleAnimation = Tween<double>(
@@ -138,16 +142,21 @@ class _AdvancedDrawerState extends State<AdvancedDrawer>
                   alignment: widget.rtlOpening
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: widget.openRatio,
-                    child: ScaleTransition(
-                      scale: _drawerScaleAnimation,
-                      alignment: widget.rtlOpening
-                          ? Alignment.centerLeft
-                          : Alignment.centerRight,
-                      child: widget.drawer,
-                    ),
-                  ),
+                  child: ValueListenableBuilder<dynamic>(
+                      valueListenable: _controller,
+                      builder: (context, snapshot, _) {
+                        return FractionallySizedBox(
+                          widthFactor:
+                              _controller.expanded ? 1 : widget.openRatio,
+                          child: ScaleTransition(
+                            scale: _drawerScaleAnimation,
+                            alignment: widget.rtlOpening
+                                ? Alignment.centerLeft
+                                : Alignment.centerRight,
+                            child: widget.drawer,
+                          ),
+                        );
+                      }),
                 ),
                 SlideTransition(
                   position: _childSlideAnimation,
@@ -215,6 +224,8 @@ class _AdvancedDrawerState extends State<AdvancedDrawer>
   }
 
   void _handleControllerChanged() {
+    buildAnimation();
+    setState(() {});
     _controller.value.visible
         ? _animationController.forward()
         : _animationController.reverse();

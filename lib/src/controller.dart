@@ -6,9 +6,21 @@ class AdvancedDrawerController extends ValueNotifier<AdvancedDrawerValue> {
   AdvancedDrawerController([AdvancedDrawerValue? value])
       : super(value ?? AdvancedDrawerValue.hidden());
 
+  bool expanded = false;
+
   /// Shows drawer.
   void showDrawer() {
     value = AdvancedDrawerValue.visible();
+    notifyListeners();
+  }
+
+  void maximize() {
+    expanded = true;
+    notifyListeners();
+  }
+
+  void minimize() {
+    expanded = false;
     notifyListeners();
   }
 
